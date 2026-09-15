@@ -1,0 +1,28 @@
+{# Priority panel — swapped in-place by HTMX on the group detail page #}
+<div id="priority-panel" class="flex items-center gap-2">
+  <form hx-post="/group/{{ article.enrichment_id }}/priority"
+        hx-target="#priority-panel" hx-swap="outerHTML"
+        class="flex items-center gap-2">
+    <select name="priority"
+            class="text-[11px] border border-slate-200 rounded-lg px-2 py-1
+                   outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400
+                   bg-slate-50 text-slate-600">
+      <option value="High"         {% if article.priority == 'High' %}selected{% endif %}>High</option>
+      <option value="Medium"       {% if article.priority == 'Medium' %}selected{% endif %}>Medium</option>
+      <option value="Low"          {% if article.priority == 'Low' %}selected{% endif %}>Low</option>
+      <option value="Disqualified" {% if article.priority == 'Disqualified' %}selected{% endif %}>Disqualified</option>
+    </select>
+    <button type="submit"
+            class="text-[10px] font-bold px-2.5 py-1 rounded-lg border border-slate-200
+                   text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors">
+      Save
+    </button>
+  </form>
+  {% if article.priority %}
+  <span class="inline-flex items-center text-[9px] font-bold tracking-[1px] uppercase
+               px-2 py-[3px] rounded-[3px] text-white flex-shrink-0"
+        style="background:{{ article.priority | priority_color }};">
+    {{ article.priority }}
+  </span>
+  {% endif %}
+</div>

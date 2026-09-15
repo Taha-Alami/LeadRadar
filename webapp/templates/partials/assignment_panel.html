@@ -1,0 +1,123 @@
+{# Assignment panel — swapped in-place by HTMX after assign/unassign actions.
+   Uses a typeahead input (name or email) backed by TEAM_CONTACTS. #}
+<div id="assignment-panel">
+{% if article.assigned_to_email %}
+  <div class="flex items-center gap-2 flex-wrap">
+    <div class="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-full pl-2 pr-3 py-1">
+      <span class="w-5 h-5 rounded-full bg-[#0d1f45] text-white flex items-center justify-center text-[9px] font-bold flex-shrink-0 select-none">
+        {{ (article.assigned_to_name or article.assigned_to_email)[:2].upper() }}
+      </span>
+      <span class="text-[11px] font-semibold text-[#0d1f45]">{{ article.assigned_to_name or article.assigned_to_email }}</span>
+    </div>
+    <span class="text-[10px] text-slate-400">
+      by {{ article.assigned_by or 'unknown' }}{% if article.assigned_at %} · {{ article.assigned_at }}{% endif %}
+    </span>
+    <button hx-delete="/group/{{ article.enrichment_id }}/assign"
+            hx-target="#assignment-panel" hx-swap="outerHTML"
+            class="text-[9px] font-semibold text-slate-400 hover:text-red-500 underline decoration-dotted">
+      Remove
+    </button>
+  </div>
+
+{% else %}
+  {# Build contacts JSON for the typeahead — injected once per panel render #}
+  {% set contacts_json %}[{% for c in team_contacts %}{"name":"{{ c.name }}","email":"{{ c.email }}"}{% if not loop.last %},{% endif %}{% endfor %}]{% endset %}
+
+  <form id="assign-form-{{ article.enrichment_id }}"
+        hx-post="/group/{{ article.enrichment_id }}/assign"
+        hx-target="#assignment-panel" hx-swap="outerHTML"
+        class="flex gap-2 items-center flex-wrap" autocomplete="off">
+
+    <input type="hidden" name="assignee_name"  id="assign-name-{{ article.enrichment_id }}">
+    <input type="hidden" name="assignee_email" id="assign-email-{{ article.enrichment_id }}">
+
+    <div class="relative flex-1 min-w-[200px]">
+      <input type="text"
+             id="assign-query-{{ article.enrichment_id }}"
+             placeholder="Type name or email…"
+             class="w-full text-[12px] border border-slate-200 rounded-lg px-3 py-1.5 outline-none
+                    focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 bg-white"
+             autocomplete="off">
+      <ul id="assign-suggestions-{{ article.enrichment_id }}"
+          class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg
+                 shadow-lg z-50 max-h-48 overflow-y-auto text-[12px]"></ul>
+    </div>
+
+    <button type="submit"
+            id="assign-btn-{{ article.enrichment_id }}"
+            disabled
+            class="px-3 py-1.5 text-[11px] font-bold text-white bg-[#0d1f45] rounded-lg
+                   hover:bg-[#163a6e] transition-colors flex-shrink-0
+                   disabled:opacity-40 disabled:cursor-not-allowed">
+      Assign
+    </button>
+  </form>
+
+  <script>
+  (function () {
+    var contacts = {{ contacts_json }};
+    var eid      = {{ article.enrichment_id }};
+
+    var qEl   = document.getElementById('assign-query-'       + eid);
+    var nEl   = document.getElementById('assign-name-'        + eid);
+    var eEl   = document.getElementById('assign-email-'       + eid);
+    var list  = document.getElementById('assign-suggestions-' + eid);
+    var btn   = document.getElementById('assign-btn-'         + eid);
+    if (!qEl) return;
+
+    function match(q) {
+      var lq = q.toLowerCase();
+      return contacts.filter(function (c) {
+        return c.name.toLowerCase().includes(lq) || c.email.toLowerCase().includes(lq);
+      });
+    }
+
+    function pick(c) {
+      qEl.value  = c.name + ' <' + c.email + '>';
+      nEl.value  = c.name;
+      eEl.value  = c.email;
+      btn.disabled = false;
+      list.innerHTML = '';
+      list.classList.add('hidden');
+    }
+
+    qEl.addEventListener('input', function () {
+      var q = qEl.value.trim();
+      // Reset hidden fields when user edits
+      nEl.value = ''; eEl.value = ''; btn.disabled = true;
+      if (q.length < 1) { list.classList.add('hidden'); return; }
+
+      var hits = match(q);
+      if (!hits.length) {
+        // Allow free-text email entry
+        if (q.includes('@')) { eEl.value = q; nEl.value = q; btn.disabled = false; }
+        list.classList.add('hidden');
+        return;
+      }
+      list.innerHTML = hits.map(function (c) {
+        return '<li data-email="' + c.email + '" data-name="' + c.name + '"' +
+          ' class="px-3 py-2 cursor-pointer hover:bg-slate-50 flex flex-col">' +
+          '<span class="font-semibold text-[#0d1f45]">' + c.name + '</span>' +
+          '<span class="text-[10px] text-slate-400">' + c.email + '</span>' +
+          '</li>';
+      }).join('');
+      list.classList.remove('hidden');
+
+      list.querySelectorAll('li').forEach(function (li) {
+        li.addEventListener('mousedown', function (ev) {
+          ev.preventDefault(); // prevent blur before click
+          pick({ name: li.dataset.name, email: li.dataset.email });
+        });
+      });
+    });
+
+    qEl.addEventListener('blur', function () {
+      setTimeout(function () { list.classList.add('hidden'); }, 150);
+    });
+    qEl.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { list.classList.add('hidden'); }
+    });
+  })();
+  </script>
+{% endif %}
+</div>

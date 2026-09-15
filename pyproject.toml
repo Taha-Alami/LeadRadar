@@ -1,0 +1,65 @@
+[project]
+name = "leadradar"
+version = "1.0.0"
+description = "AI-powered B2B lead discovery — turns daily news into qualified, enriched sales leads."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    # LLM + config
+    "openai>=1.30.0",
+    "python-dotenv>=1.0.0",
+    # Collection + scraping
+    "requests>=2.31.0",
+    "feedparser>=6.0.12",
+    "trafilatura>=1.12.0",
+    "newspaper4k>=0.9.3",
+    "googlenewsdecoder>=0.1.7",
+    "playwright>=1.45.0",
+    "unidecode>=1.3.0",
+    # Storage
+    "pandas>=3.0.3",
+    "pyodbc>=5.3.0",
+    "sqlalchemy>=2.0.0",
+    # Web app
+    "fastapi>=0.136.3",
+    "uvicorn>=0.48.0",
+    "jinja2>=3.1.6",
+    "python-multipart>=0.0.30",
+    "itsdangerous>=2.2.0",
+    "msal>=1.37.0",
+    # Orchestration
+    "prefect==3.2.15",
+    "griffe<1.0.0",
+    "importlib-metadata>=9.0.0",
+    # Contact finder (local package)
+    "clay-contact-finder",
+]
+
+[tool.uv]
+package = false
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+[tool.uv.sources]
+clay-contact-finder = { path = "clay_contact_finder", editable = true }
+
+# ── Pytest ────────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths        = ["tests"]
+pythonpath       = ["."]
+python_files     = ["test_*.py"]
+python_functions = ["test_*"]
+log_cli          = false
+log_format       = "%(asctime)s  %(levelname)-8s  %(name)s — %(message)s"
+log_date_format  = "%H:%M:%S"
+
+# ── Ruff (linting + formatting) ───────────────────────────────────────────────
+[tool.ruff]
+target-version = "py311"
+line-length    = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "E221", "E251"]   # aligned assignments are used deliberately for readability

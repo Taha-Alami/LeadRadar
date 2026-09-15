@@ -1,0 +1,130 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# LeadRadar business profile — EXAMPLE (fictional company)
+#
+# Describes WHO is looking for leads and WHAT counts as a good one. Every LLM
+# prompt in the pipeline (triage, picker, enricher) and the web-app chat is
+# built from this file — no industry is hard-coded anywhere in the source.
+#
+# To target a different business, copy this file, edit it, and set
+#   BUSINESS_PROFILE=profiles/your_company.toml
+# in .env.
+# ──────────────────────────────────────────────────────────────────────────────
+
+[company]
+name    = "Acme Equipment Rental"
+tagline = "construction and industrial equipment rental"
+description = """
+Acme rents construction and industrial equipment across Europe: earthmoving
+machines, aerial work platforms, generators and temporary power, lighting
+towers, temporary fencing, and site cabins. Its customers are general
+contractors, industrial site owners, energy developers, event organisers,
+and public bodies running projects that need equipment for weeks or months.
+"""
+# The LLM reasons about demand for THESE when it judges an article.
+products = [
+    "earthmoving equipment (excavators, loaders, dumpers)",
+    "aerial work platforms and telehandlers",
+    "generators and temporary power distribution",
+    "lighting towers and temporary fencing",
+    "temporary site cabins and storage containers",
+]
+
+[lead]
+# Label shown on lead cards / emails for the "why do they need us" field.
+fit_label = "Equipment need"
+# What the enricher writes in that field.
+fit_definition = "why this project plausibly needs to rent equipment from us"
+# Picker hard requirement #1 (the other two — timing and location — are generic).
+relevance = """the project plausibly creates demand for rented construction or \
+industrial equipment: new construction, renovation, civil works, infrastructure, \
+industrial / logistics / data-centre builds, energy projects, large events, or \
+emergency response."""
+# Ranking hints for the picker — none is individually required, each one met adds value.
+quality_signals = [
+    "Scale: the text implies a large site, a large workforce, or several sites — more machines for longer.",
+    "Heavy phases: earthworks, foundations, civil engineering, or energy installation imply heavy-equipment demand.",
+    "Duration: multi-month or multi-year works outrank short one-off jobs.",
+    "Reachability: a named contractor, developer, or public buyer who can actually be contacted.",
+]
+
+[priority]
+high = """large-scale projects with a long, multi-category equipment need: major \
+infrastructure (roads, rail, bridges, ports), energy (wind/solar farms, grid, \
+hydrogen, battery storage), industrial plants, logistics parks, or data centres. \
+Only High if the text suggests material scale — a small unit or a single-machine \
+job does not qualify."""
+medium = """standard building-construction projects run by a general contractor \
+(housing estates, offices, schools, hospitals) — steady volume but more price \
+competition. Also mid-sized events or public works with a clear site phase. A \
+very large, multi-year construction project may be upgraded to High."""
+low = """small or short jobs: single-family homes, small renovations, one-day \
+events, small local budgets, private individuals, or news with no physical works \
+phase at all."""
+
+# Closed vocabulary of target sectors. `higher_margin = true` sectors outrank the
+# others when the picker ranks otherwise-equal leads.
+[[sectors]]
+name        = "Construction"
+description = "general-contractor building and civil-engineering sites needing earthmoving, lifting, access, power, and site-setup equipment. Excludes single-family homes."
+
+[[sectors]]
+name          = "Energy & Utilities"
+description   = "wind and solar farms, grid and substation works, hydrogen and battery plants, water and wastewater treatment — often remote sites with long equipment needs."
+higher_margin = true
+
+[[sectors]]
+name          = "Industry"
+description   = "factories, logistics parks, warehouses, and data centres — new builds, expansions, and shutdown/maintenance campaigns."
+higher_margin = true
+
+[[sectors]]
+name          = "Public Administration"
+description   = "public bodies commissioning works: schools, hospitals, municipal buildings, defence sites, public tenders."
+higher_margin = true
+
+[[sectors]]
+name          = "Events"
+description   = "festivals, sports events, trade fairs, and concerts needing temporary power, lighting, fencing, and site cabins."
+higher_margin = true
+
+[search]
+# Extra Google News themes on top of the generic project themes ("+" = AND).
+extra_themes_en = [
+    "earthworks+civil+engineering+contract",
+    "factory+plant+expansion+investment",
+]
+
+# Extra local-language themes, keyed by language code. Applied to every
+# country whose local searches use that language.
+[search.extra_local_themes]
+pl = ["roboty+ziemne+przetarg"]
+nl = ["grondwerk+aanbesteding"]
+fr = ["terrassement+marché+public"]
+it = ["movimento+terra+appalto"]
+es = ["movimiento+de+tierras+licitación"]
+
+# Sales team (fictional) — used for lead assignment, sharing, and @mentions in
+# the web app. `countries` limits who shows up per country; omit it for "all".
+[[team]]
+name      = "Jane Cooper"
+email     = "jane.cooper@example.com"
+countries = ["NETHERLANDS", "BELGIUM"]
+
+[[team]]
+name      = "Marco Bianchi"
+email     = "marco.bianchi@example.com"
+countries = ["ITALY"]
+
+[[team]]
+name      = "Lucía Fernández"
+email     = "lucia.fernandez@example.com"
+countries = ["SPAIN"]
+
+[[team]]
+name      = "Piotr Nowak"
+email     = "piotr.nowak@example.com"
+countries = ["POLAND"]
+
+[[team]]
+name  = "Sam Taylor"
+email = "sam.taylor@example.com"

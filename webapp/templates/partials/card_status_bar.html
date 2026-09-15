@@ -1,0 +1,94 @@
+{# Card-level status bar.
+   Shows: assignment badge + qualification badge + quick qualify/disqualify buttons.
+   Buttons are suppressed on the group detail page (set {% set in_group_detail = true %}
+   in group.html) since the qualify panel at the top already handles them there. #}
+<div id="card-status-{{ article.enrichment_id }}"
+     class="flex items-center gap-2 flex-wrap pt-2.5 pb-0.5 border-t border-slate-100"
+     data-no-card-nav>
+
+  {# ── Assignment badge ────────────────────────── #}
+  {% if article.assigned_to_email %}
+  <div class="flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-full pl-1 pr-2 py-0.5"
+       title="Assigned to {{ article.assigned_to_name or article.assigned_to_email }}">
+    <span class="w-4 h-4 rounded-full bg-[#0d1f45] text-white flex items-center justify-center
+                 text-[8px] font-bold flex-shrink-0 select-none">
+      {{ (article.assigned_to_name or article.assigned_to_email)[:2].upper() }}
+    </span>
+    <span class="text-[10px] font-semibold text-blue-700 max-w-[100px] truncate">
+      {{ article.assigned_to_name or article.assigned_to_email }}
+    </span>
+  </div>
+  {% if article.assigned_by %}
+  <span class="text-[9px] text-slate-400">by {{ article.assigned_by }}</span>
+  {% endif %}
+  {% endif %}
+
+  {# ── Qualification badge ─────────────────────── #}
+  {% if article.qualification == 'Qualified' %}
+  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold
+               bg-emerald-50 border border-emerald-200 text-emerald-700"
+        title="Qualified{% if article.qualified_by %} by {{ article.qualified_by }}{% endif %}">
+    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+    </svg>
+    Qualified
+  </span>
+  {% elif article.qualification == 'Disqualified' %}
+  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold
+               bg-red-50 border border-red-200 text-red-700"
+        title="Disqualified{% if article.qualified_by %} by {{ article.qualified_by }}{% endif %}">
+    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    Disqualified
+  </span>
+  {% endif %}
+
+  {# ── Quick qualify / disqualify buttons — hidden on group detail page.
+     Using hx-post directly on <button> with hx-vals avoids form-submit/click
+     propagation conflicts inside the card's click-navigable div. ── #}
+  {% if article.enrichment_id and not in_group_detail %}
+  <div class="flex items-center gap-1 ml-auto">
+    {% if article.qualification != 'Qualified' %}
+    <button hx-post="/enrich/{{ article.enrichment_id }}/qualify"
+            hx-vals='{"status": "Qualified"}'
+            hx-target="#card-status-{{ article.enrichment_id }}"
+            hx-swap="outerHTML"
+            hx-trigger="click"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold
+                   border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 transition-colors"
+            title="Mark as Qualified">
+      <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+      </svg>
+      Qualify
+    </button>
+    {% endif %}
+    {% if article.qualification != 'Disqualified' %}
+    <button hx-post="/enrich/{{ article.enrichment_id }}/qualify"
+            hx-vals='{"status": "Disqualified"}'
+            hx-target="#card-status-{{ article.enrichment_id }}"
+            hx-swap="outerHTML"
+            hx-trigger="click"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold
+                   border border-red-300 text-red-700 bg-white hover:bg-red-50 transition-colors"
+            title="Mark as Disqualified">
+      <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+      Disqualify
+    </button>
+    {% endif %}
+    {% if article.qualification %}
+    <button hx-post="/enrich/{{ article.enrichment_id }}/qualify"
+            hx-vals='{"status": ""}'
+            hx-target="#card-status-{{ article.enrichment_id }}"
+            hx-swap="outerHTML"
+            hx-trigger="click"
+            class="text-[9px] font-semibold text-slate-400 hover:text-slate-600 px-1 underline decoration-dotted"
+            title="Clear qualification">Clear</button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>

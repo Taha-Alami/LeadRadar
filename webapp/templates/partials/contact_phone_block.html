@@ -1,0 +1,26 @@
+{# Independently swappable -- see contact_email_block.html's comment for why. #}
+<span id="phone-block-{{ c.id }}">
+  {% if c.work_phone %}
+  <span class="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-600">
+    <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h1.5a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a2.25 2.25 0 00-2.436.831l-.719.958a.5.5 0 01-.61.148 11.25 11.25 0 01-5.223-5.223.5.5 0 01.148-.61l.958-.719a2.25 2.25 0 00.831-2.436L7.964 3.102a1.125 1.125 0 00-1.091-.852H5.5A2.25 2.25 0 003.25 4.5v1.5c0 .414-.336.75-.75.75z"/>
+    </svg>
+    {{ c.work_phone }}
+  </span>
+  {% elif c.phone_enriched_at %}
+  <span class="text-[10px] text-slate-300">Phone not found</span>
+  {% elif c.phone_in_flight %}
+  <span class="text-[10px] text-slate-400">Looking up&hellip;</span>
+  {% else %}
+  <button type="button"
+          hx-post="/contacts/{{ c.id }}/phone"
+          hx-target="#phone-block-{{ c.id }}"
+          hx-swap="outerHTML"
+          hx-indicator="#phone-ind-{{ c.id }}"
+          hx-disabled-elt="this"
+          class="text-[10.5px] font-bold text-blue-600 hover:underline disabled:opacity-50 disabled:cursor-wait">
+    Get phone
+  </button>
+  <span id="phone-ind-{{ c.id }}" class="htmx-indicator text-[10px] text-slate-400">Looking up&hellip;</span>
+  {% endif %}
+</span>

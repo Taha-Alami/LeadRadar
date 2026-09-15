@@ -1,0 +1,28 @@
+{# Live search results inside the "Link to another opportunity" modal.
+   Context: results (list of candidate dicts), current_id (enrichment_id of
+   the card the user is linking FROM), current_article_id (its news_articles.id,
+   used as the HTMX swap target after a successful link). #}
+{% if results %}
+{% for r in results %}
+<button
+  hx-post="/link/{{ current_id }}/{{ r.id }}"
+  hx-target="#article-{{ current_article_id }}"
+  hx-swap="outerHTML"
+  onclick="closeLinkModal()"
+  class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300
+         hover:bg-blue-50/40 transition-colors"
+>
+  <div class="flex items-center justify-between gap-2 mb-1">
+    <span class="text-[10px] font-bold text-slate-400">{{ r.opportunity_code }}</span>
+    <span class="text-[9px] font-bold uppercase tracking-[1px] px-2 py-[2px] rounded-full text-white flex-shrink-0"
+          style="background:{{ r.phase_color }};">{{ r.phase or 'Unknown' }}</span>
+  </div>
+  <div class="text-[12px] font-semibold text-slate-700 leading-snug line-clamp-2">{{ r.title }}</div>
+  <div class="text-[10px] text-slate-400 mt-1">
+    {% if r.city %}{{ r.city }} &middot; {% endif %}{{ r.publication_date or 'date unknown' }}
+  </div>
+</button>
+{% endfor %}
+{% else %}
+<div class="p-3 text-[11px] text-slate-400">No matching opportunities found.</div>
+{% endif %}

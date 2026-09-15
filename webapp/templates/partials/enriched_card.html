@@ -1,0 +1,249 @@
+{# Enriched opportunity card.
+   Toast data is embedded as data-* attributes on the card root.
+   base.html's htmx:afterSwap listener reads them and shows the toast.
+   Clicking anywhere on the card (except the title/Read links, kebab menu,
+   and disabled buttons) navigates to /group/{enrichment_id} — the linked-
+   opportunities detail page. #}
+<div id="article-{{ article.id }}"
+     {% if article.enrichment_id %}data-group-link="/group/{{ article.enrichment_id }}"{% endif %}
+     class="bg-white rounded-xl overflow-hidden card-animate card-hover-lift"
+     style="border:1px solid rgba(13,31,69,0.09);box-shadow:0 2px 8px rgba(13,31,69,0.05);{% if article.enrichment_id %}cursor:pointer;{% endif %}"
+     data-toast-phase="{{ article.phase or 'Unknown' }}"
+     data-toast-company="{{ article.company or '' }}"
+     data-toast-budget="{{ article.project_value or '' }}"
+     data-toast-city="{{ article.city or '' }}"
+     data-toast-title="{{ article.title or '' }}"
+     data-toast-color="{{ article.phase_color }}">
+
+  <div style="height:4px;background:linear-gradient(90deg,{{ article.phase_color }},{{ article.phase_color }}cc);"></div>
+
+  {% if article.is_new %}
+  <div style="padding:6px 10px 0;display:flex;justify-content:flex-end;">
+    <span style="display:inline-flex;align-items:center;gap:6px;
+                 background:linear-gradient(135deg,#EF4444 0%,#DC2626 100%);
+                 border-radius:999px;padding:4px 10px 4px 6px;
+                 animation:badge-glow 1.6s ease-in-out infinite;">
+      <span style="position:relative;width:7px;height:7px;flex-shrink:0;">
+        <span style="position:absolute;inset:0;border-radius:50%;background:rgba(255,255,255,0.55);
+                     animation:badge-ping 1.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+        <span style="position:relative;display:block;width:7px;height:7px;border-radius:50%;background:#fff;"></span>
+      </span>
+      <span style="font-size:8px;font-weight:900;letter-spacing:2.5px;
+                   text-transform:uppercase;color:#fff;">New</span>
+    </span>
+  </div>
+  {% endif %}
+
+  <div class="p-5">
+
+    <div class="flex items-center gap-2 mb-2">
+      {% if article.opportunity_code %}
+      <span class="text-[9px] font-bold text-slate-400 flex-shrink-0">{{ article.opportunity_code }}</span>
+      {% endif %}
+      <span class="inline-block text-[9px] font-bold tracking-[2px] uppercase
+                   px-2 py-[3px] rounded-[3px] text-white flex-shrink-0"
+            style="background:{{ article.phase_color }};">
+        {{ article.phase or 'Unknown' }}
+      </span>
+      {% if article.linked_count %}
+      <span class="inline-flex items-center gap-1 text-[9px] font-bold text-blue-500 bg-blue-50
+                   px-2 py-[3px] rounded-full border border-blue-100 flex-shrink-0">
+        <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z"/>
+          <path d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 105.656 5.656l3-3a4 4 0 00-.225-5.865z"/>
+        </svg>
+        {{ article.linked_count }} linked
+      </span>
+      {% endif %}
+      <span class="text-[10px] text-slate-300 ml-auto flex-shrink-0">
+        {% if article.publication_date %}Published {{ article.publication_date }}{% endif %}
+      </span>
+      {% if article.enrichment_id %}
+      <div class="relative flex-shrink-0" data-no-card-nav>
+        <button data-kebab-toggle onclick="toggleKebab(event, 'kebab-{{ article.enrichment_id }}')"
+                class="w-6 h-6 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-colors">
+          <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+          </svg>
+        </button>
+        <div id="kebab-{{ article.enrichment_id }}"
+             class="hidden absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-lg border border-slate-200 z-30 py-1">
+          <button onclick="openLinkModal({{ article.enrichment_id }}, {{ article.id }}, '{{ article.country }}', '{{ article.country_prefix }}')"
+                  class="w-full text-left px-3 py-2 text-[12px] text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
+            </svg>
+            Link to another opportunity
+          </button>
+          <button onclick="openShareModal({{ article.enrichment_id }}, '{{ article.opportunity_code }}')"
+                  class="w-full text-left px-3 py-2 text-[12px] text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+            </svg>
+            Send via email
+          </button>
+          {% if article.parent_id %}
+          <button hx-post="/unlink/{{ article.enrichment_id }}" hx-target="#article-{{ article.id }}" hx-swap="outerHTML"
+                  onclick="closeAllKebabs()"
+                  class="w-full text-left px-3 py-2 text-[12px] text-red-500 hover:bg-red-50 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+            Unlink from group
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Triage tags: priority / sector / region -->
+    {% if article.priority or article.sector or article.region %}
+    <div class="flex items-center gap-1.5 flex-wrap mb-2">
+      {% if article.priority %}
+      <span class="inline-flex items-center text-[9px] font-bold tracking-[1px] uppercase
+                   px-2 py-[3px] rounded-[3px] text-white flex-shrink-0"
+            style="background:{{ article.priority | priority_color }};">
+        {{ article.priority }}
+      </span>
+      {% endif %}
+      {% if article.sector %}
+      <span class="text-[9px] font-semibold text-slate-600 bg-slate-100 px-2 py-[3px] rounded-[3px] flex-shrink-0">
+        {{ article.sector }}
+      </span>
+      {% endif %}
+      {% if article.region %}
+      <span class="text-[10px] font-medium text-slate-600 truncate">&#128205; {{ article.region }}</span>
+      {% endif %}
+      {% if article.end_usage %}
+      <span class="text-[9px] font-semibold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-[3px] rounded-[3px] flex-shrink-0">
+        {{ article.end_usage }}
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="text-[15px] font-bold text-[#0d1f45] leading-snug mb-2 line-clamp-2">
+      {{ article.title }}
+    </div>
+
+    {% if article.english_summary and article.output_language != 'English' %}
+    <div class="rounded-md border border-blue-100 bg-blue-50 px-3 py-2 mb-3">
+      <div class="flex items-center gap-1.5 mb-1">
+        <span class="text-[8px] font-black tracking-[1.8px] uppercase text-blue-500 bg-blue-100 px-1.5 py-[2px] rounded-[3px]">EN</span>
+        <span class="text-[8px] font-bold uppercase tracking-[1.2px] text-blue-400">Summary</span>
+      </div>
+      <p class="text-[11px] text-blue-900 leading-relaxed">{{ article.english_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if article.company or article.project_value or article.project_type %}
+    <div class="flex gap-1.5 flex-wrap mb-3">
+      {% if article.company %}
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-md px-3 py-1.5 min-w-0">
+        <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
+        </svg>
+        <span class="text-[11px] font-semibold text-slate-400 flex-shrink-0">Company:</span>
+        <span class="text-[11px] font-semibold text-slate-600 truncate" title="{{ article.company }}">{{ article.company }}</span>
+      </div>
+      {% endif %}
+      {% if article.project_value %}
+      <div class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-md px-3 py-1.5 min-w-0">
+        <svg class="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-[11px] font-semibold text-blue-400 flex-shrink-0">Budget:</span>
+        <span class="text-[11px] font-semibold text-blue-700 truncate" title="{{ article.project_value }}">{{ article.project_value }}</span>
+      </div>
+      {% endif %}
+      {% if article.project_type %}
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-md px-3 py-1.5 min-w-0">
+        <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 000-1.414l-7-7a1 1 0 00-.707-.293H4a1 1 0 00-1 1v6a1 1 0 00.293.707l7 7a1 1 0 001.414 0l6-6zM5.5 6a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" clip-rule="evenodd"/>
+        </svg>
+        <span class="text-[11px] font-semibold text-slate-400 flex-shrink-0">Project type:</span>
+        <span class="text-[11px] font-semibold text-slate-600 truncate" title="{{ article.project_type }}">{{ article.project_type }}</span>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if article.why_it_matters %}
+    <p class="text-[12px] text-slate-500 leading-relaxed mb-2.5">{{ article.why_it_matters }}</p>
+    {% endif %}
+
+    {% if article.product_fit %}
+    <div class="flex items-start gap-1.5 mb-1.5">
+      <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#C8900A] mt-[4px]"></span>
+      <p class="text-[12px] leading-snug text-[#4a3a0a]">
+        <span class="font-bold text-[#9A6800] uppercase tracking-[1.2px] text-[9px] mr-1">{{ profile.fit_label }}</span>{{ article.product_fit }}
+      </p>
+    </div>
+    {% endif %}
+
+    {% if article.recommended_action %}
+    <div class="flex items-start gap-1.5 mb-3">
+      <span class="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#2E7D32] mt-[4px]"></span>
+      <p class="text-[12px] leading-snug text-[#0a3a0e]">
+        <span class="font-bold text-[#1B5E20] uppercase tracking-[1.2px] text-[9px] mr-1">Action</span>{{ article.recommended_action }}
+      </p>
+    </div>
+    {% endif %}
+
+    {# ── Assignment + Qualification status bar.
+         Always shown on root cards (quick action buttons), only shown on child
+         cards if they carry assignment or qualification data (rare in practice). #}
+    {% if article.enrichment_id and (not article.parent_id or article.assigned_to_email or article.qualification) %}
+    {% include "partials/card_status_bar.html" %}
+    {% endif %}
+
+    <!-- Contact enrichment + coming-soon actions. The real "Enrich Contact"
+         action only renders on the group representative card (show_contacts_action,
+         set explicitly in group.html) — never on the main grid or on linked
+         children, so a company only ever gets searched once per group. -->
+    <div class="flex items-center gap-2 flex-wrap mb-3 mt-3">
+      {% if show_contacts_action and article.enrichment_id %}
+      <button type="button" data-no-card-nav
+              onclick="openContactsModal({{ article.enrichment_id }}, '{{ (article.opportunity_code or '')|e }}', '{{ (article.company or '')|e }}', '{{ (article.country or '')|e }}')"
+              class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[1px]
+                     px-3 py-1.5 rounded-lg text-white bg-[#0d1f45] hover:bg-[#163a6e]
+                     transition-colors duration-150 active:scale-[0.98]">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+        </svg>
+        Enrich Contact
+      </button>
+      {% endif %}
+
+      <button disabled title="Coming soon"
+              class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[1px]
+                     px-3 py-1.5 rounded-lg text-slate-400 bg-slate-100 border border-slate-200
+                     cursor-not-allowed select-none">
+        <svg class="w-3 h-3 opacity-60" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+          <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+          <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+        </svg>
+        Push to CRM
+        <span class="ml-1 text-[8px] normal-case tracking-normal font-semibold
+                     bg-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Soon</span>
+      </button>
+    </div>
+
+    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
+      <div class="min-w-0">
+        <span class="text-[10px] text-slate-500 truncate block">{{ article.source_outlet or '' }}</span>
+        {% if article.created_at %}
+        <span class="text-[9px] text-slate-500" title="Date added to the database">Collected {{ article.created_at }}</span>
+        {% endif %}
+      </div>
+      <a href="{{ article.url }}" target="_blank" rel="noopener"
+         class="text-[10px] font-bold tracking-[0.8px] uppercase flex-shrink-0 ml-2 transition-colors hover:opacity-70"
+         style="color:{{ article.phase_color }};">Read &rsaquo;</a>
+    </div>
+
+  </div>
+</div>

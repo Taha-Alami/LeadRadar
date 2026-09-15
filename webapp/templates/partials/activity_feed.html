@@ -1,0 +1,183 @@
+{% if not events %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+            padding:52px 20px;gap:12px;">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+       stroke="rgba(148,163,184,0.3)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+  <p style="margin:0;font-size:11px;color:rgba(148,163,184,0.45);text-align:center;line-height:1.6;">
+    No recent activity.<br>
+    Assign or qualify opportunities<br>to see the feed populate.
+  </p>
+</div>
+
+{% else %}
+
+{% for e in events %}
+{% set txt = e.comment_text | lower %}
+
+{# ── Color per event type ─────────────────────────────── #}
+{% if 'assignment removed' in txt %}
+  {% set accent = '#94a3b8' %}{% set ic = '#94a3b8' %}{% set ibg = '#f8fafc' %}{% set etype = 'user-x' %}
+{% elif 'assigned to' in txt %}
+  {% set accent = '#3b82f6' %}{% set ic = '#3b82f6' %}{% set ibg = '#eff6ff' %}{% set etype = 'user' %}
+{% elif 'marked as disqualified' in txt %}
+  {% set accent = '#ef4444' %}{% set ic = '#ef4444' %}{% set ibg = '#fef2f2' %}{% set etype = 'x-circle' %}
+{% elif 'marked as qualified' in txt %}
+  {% set accent = '#22c55e' %}{% set ic = '#22c55e' %}{% set ibg = '#f0fdf4' %}{% set etype = 'check-circle' %}
+{% elif 'qualification cleared' in txt %}
+  {% set accent = '#f59e0b' %}{% set ic = '#f59e0b' %}{% set ibg = '#fffbeb' %}{% set etype = 'alert' %}
+{% elif 'priority changed' in txt %}
+  {% set accent = '#8b5cf6' %}{% set ic = '#8b5cf6' %}{% set ibg = '#f5f3ff' %}{% set etype = 'sort' %}
+{% elif 'removed from' in txt %}
+  {% set accent = '#94a3b8' %}{% set ic = '#94a3b8' %}{% set ibg = '#f8fafc' %}{% set etype = 'unlink' %}
+{% elif 'linked' in txt %}
+  {% set accent = '#0ea5e9' %}{% set ic = '#0ea5e9' %}{% set ibg = '#f0f9ff' %}{% set etype = 'link' %}
+{% else %}
+  {% set accent = '#cbd5e1' %}{% set ic = '#94a3b8' %}{% set ibg = '#f8fafc' %}{% set etype = 'info' %}
+{% endif %}
+
+{# ── Author ─────────────────────────────────── #}
+{% set _an = e.author_name or '' %}
+{% set _parts = _an.strip().split() %}
+{% set _has_author = _an and _an.strip() %}
+{% if _has_author %}
+  {% set _init = (_parts[0][0] if _parts else '') + (_parts[-1][0] if _parts | length > 1 else '') %}
+{% endif %}
+
+{# ── Row ─────────────────────────────────────── #}
+<a href="/group/{{ e.group_id }}"
+   style="display:flex;align-items:stretch;text-decoration:none;
+          border-bottom:1px solid #f1f5f9;
+          transition:background 100ms ease;"
+   onmouseover="this.style.background='#f8fafc'"
+   onmouseout="this.style.background=''">
+
+  {# Left accent strip — 4px wide #}
+  <div style="width:4px;background:{{ accent }};flex-shrink:0;border-radius:0 2px 2px 0;margin:10px 0;"></div>
+
+  {# Icon — simple stroke, thin lines #}
+  <div style="padding:10px 10px 10px 10px;flex-shrink:0;">
+    <div style="width:48px;height:48px;border-radius:14px;background:{{ ibg }};
+                display:grid;place-items:center;">
+
+      {% if etype == 'user' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="8" r="4"/>
+        <path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/>
+      </svg>
+
+      {% elif etype == 'user-x' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="10" cy="8" r="4"/>
+        <path d="M2 20c0-3.9 3.1-7 7-7"/>
+        <line x1="17" y1="13" x2="22" y2="18"/>
+        <line x1="22" y1="13" x2="17" y2="18"/>
+      </svg>
+
+      {% elif etype == 'check-circle' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="7 12 10.5 15.5 17 8"/>
+      </svg>
+
+      {% elif etype == 'x-circle' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/>
+        <line x1="15.5" y1="8.5" x2="8.5" y2="15.5"/>
+      </svg>
+
+      {% elif etype == 'alert' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <circle cx="12" cy="17.5" r="0.8" fill="{{ ic }}"/>
+      </svg>
+
+      {% elif etype == 'sort' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="15" y2="12"/>
+        <line x1="3" y1="18" x2="9" y2="18"/>
+        <polyline points="17 15 20 18 17 21"/>
+      </svg>
+
+      {% elif etype == 'link' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+      </svg>
+
+      {% elif etype == 'unlink' %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+        <line x1="3" y1="3" x2="21" y2="21"/>
+      </svg>
+
+      {% else %}
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+           stroke="{{ ic }}" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <circle cx="12" cy="16" r="0.8" fill="{{ ic }}"/>
+      </svg>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {# Content #}
+  <div style="flex:1;padding:10px 12px 10px 0;min-width:0;">
+
+    <div style="font-size:11.5px;font-weight:600;color:#1e293b;line-height:1.35;margin-bottom:3px;">
+      {{ e.comment_text }}
+    </div>
+
+    <div style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;
+                text-overflow:ellipsis;margin-bottom:6px;line-height:1.4;">
+      {{ e.opportunity_title }}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:5px;">
+
+      {% if e.country %}
+      <span class="fi fi-{{ country_flag(e.country) }}"
+            style="width:13px;height:10px;border-radius:1px;flex-shrink:0;
+                   box-shadow:0 1px 2px rgba(0,0,0,0.15);"></span>
+      {% endif %}
+
+      {% if _has_author %}
+      <span style="width:26px;height:26px;border-radius:50%;
+                   background:#0d1f45;
+                   color:#fff;
+                   font-size:9px;font-weight:400;letter-spacing:0.5px;
+                   display:inline-flex;align-items:center;justify-content:center;
+                   flex-shrink:0;">{{ _init | upper }}</span>
+      <span style="font-size:10px;color:#64748b;flex:1;min-width:0;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        {{ _an }}
+      </span>
+      {% else %}
+      <span style="flex:1;"></span>
+      {% endif %}
+
+      <span style="font-size:9px;color:#cbd5e1;flex-shrink:0;
+                   font-variant-numeric:tabular-nums;">{{ e.time_str }}</span>
+    </div>
+
+  </div>
+</a>
+
+{% endfor %}
+{% endif %}

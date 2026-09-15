@@ -1,0 +1,102 @@
+{# One entry in a group's notes thread.
+   note_type = 'comment'  → normal user note, editable/deletable
+   note_type = 'event'    → system message (link/unlink/assign/qualify), immutable
+   note_type = 'history'  → frozen copy from a previously linked group, read-only #}
+
+{# Compute initials and avatar color once for reuse #}
+{% set _aname   = note.author_name or 'Anonymous' %}
+{% set _parts   = _aname.split() %}
+{% set _initial1 = _parts[0][0] | upper %}
+{% set _initial2 = (_parts[-1][0] | upper) if _parts | length > 1 else '' %}
+{% set _initials = _initial1 + _initial2 %}
+{% set _acolor  = _aname | avatar_color %}
+
+<div id="note-{{ note.id }}" class="group">
+
+{% if note.note_type == 'event' %}
+  {# ── System event — compact timeline entry ── #}
+  <div class="flex items-center gap-2.5 py-1">
+    <div class="w-7 flex-shrink-0 flex justify-center">
+      <div class="w-[5px] h-[5px] rounded-full bg-slate-200 flex-shrink-0"></div>
+    </div>
+    <span class="flex-1 text-[10px] text-slate-400 leading-relaxed">
+      {{ note.comment_text | render_mentions }}
+      {% if note.author_name %}
+        <span class="text-slate-300"> — {{ note.author_name }}</span>
+      {% endif %}
+    </span>
+    <span class="flex-shrink-0 text-[9px] text-slate-300">{{ note.created_at }}</span>
+  </div>
+
+{% elif note.note_type == 'history' %}
+  {# ── Frozen history copy — greyed out ── #}
+  <div class="flex items-start gap-2.5 mb-3 opacity-50">
+    <div style="width:30px;height:30px;border-radius:50%;background:{{ _acolor }};
+                display:flex;align-items:center;justify-content:center;
+                font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px;
+                font-family:ui-sans-serif,system-ui,sans-serif;line-height:1;letter-spacing:0.5px;">
+      {{ _initials }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-baseline gap-2 mb-0.5">
+        <span class="text-[11px] font-semibold text-slate-500">{{ _aname }}</span>
+        <span class="text-[9px] text-slate-300">{{ note.created_at }}</span>
+      </div>
+      <p class="text-[11px] text-slate-400 leading-relaxed whitespace-pre-wrap">{{ note.comment_text | render_mentions }}</p>
+    </div>
+  </div>
+
+{% else %}
+  {# ── Normal user comment ── #}
+  <div id="note-view-{{ note.id }}" class="flex items-start gap-2.5 mb-3">
+    <div style="width:30px;height:30px;border-radius:50%;background:{{ _acolor }};
+                display:flex;align-items:center;justify-content:center;
+                font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px;
+                font-family:ui-sans-serif,system-ui,sans-serif;line-height:1;letter-spacing:0.5px;">
+      {{ _initials }}
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="flex items-baseline gap-2 mb-0.5">
+        <span class="text-[12px] font-bold text-slate-700">{{ _aname }}</span>
+        <span class="text-[9px] text-slate-400 flex-shrink-0">
+          {{ note.created_at }}{% if note.was_edited %} &middot; edited{% endif %}
+        </span>
+      </div>
+      <p class="text-[12px] text-slate-600 leading-relaxed whitespace-pre-wrap break-words">{{ note.comment_text | render_mentions }}</p>
+      {% if _aname == current_user_display and current_user_display %}
+      <div class="flex gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <button onclick="toggleNoteEdit({{ note.id }})"
+                class="text-[9px] font-semibold uppercase tracking-wide text-slate-400 hover:text-blue-500 transition-colors">
+          Edit
+        </button>
+        <button hx-delete="/notes/{{ note.id }}" hx-target="#note-{{ note.id }}" hx-swap="outerHTML"
+                hx-confirm="Delete this note?"
+                class="text-[9px] font-semibold uppercase tracking-wide text-slate-400 hover:text-red-500 transition-colors">
+          Delete
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="note-edit-{{ note.id }}" class="hidden mb-3 pl-[36px]">
+    <textarea id="note-edit-input-{{ note.id }}" name="comment_text" rows="3"
+              class="w-full text-[12px] border border-slate-200 rounded-xl px-3 py-2.5 outline-none
+                     focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 resize-none mb-2
+                     transition-colors leading-relaxed">{{ note.comment_text }}</textarea>
+    <div class="flex gap-2">
+      <button hx-put="/notes/{{ note.id }}" hx-include="#note-edit-input-{{ note.id }}"
+              hx-target="#note-{{ note.id }}" hx-swap="outerHTML"
+              class="text-[10px] font-bold text-white bg-[#0d1f45] hover:bg-[#163a6e]
+                     px-3 py-1.5 rounded-lg transition-colors">
+        Save
+      </button>
+      <button onclick="toggleNoteEdit({{ note.id }})"
+              class="text-[10px] font-semibold text-slate-400 hover:text-slate-600 px-3 py-1.5 transition-colors">
+        Cancel
+      </button>
+    </div>
+  </div>
+{% endif %}
+
+</div>

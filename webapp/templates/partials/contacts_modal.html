@@ -1,0 +1,17 @@
+{# Full modal shell for the "Enrich Contact" feature — returned by
+   GET /contacts/{enrichment_id} and swapped into #link-modal-content by
+   openContactsModal() in base.html. The inner #contacts-body region is what
+   subsequent POST /contacts/{enrichment_id}/search responses replace, so the
+   header/close button never re-render mid-interaction. #}
+<div class="p-5 border-b border-slate-100 flex items-center justify-between">
+  <div class="min-w-0">
+    <h3 class="text-[13px] font-bold text-[#0d1f45] uppercase tracking-wide">Contacts</h3>
+    {% if company %}
+    <div class="text-[11px] text-slate-400 mt-0.5 truncate">{{ company }}{% if country %} &middot; {{ country|title }}{% endif %}</div>
+    {% endif %}
+  </div>
+  <button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg leading-none flex-shrink-0 ml-3">&times;</button>
+</div>
+<div id="contacts-body" class="p-5 max-h-[65vh] overflow-y-auto">
+  {% include "partials/contacts_body.html" %}
+</div>

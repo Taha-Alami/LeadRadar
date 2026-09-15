@@ -1,0 +1,54 @@
+{# Error card — returned when enrichment fails. Shows a retry button. #}
+<div id="article-{{ article_id }}"
+     class="bg-white rounded-lg border border-red-200 overflow-hidden shadow-sm card-animate">
+
+  <div class="h-[3px] bg-red-400"></div>
+
+  <div class="p-5">
+
+    <div class="flex items-center gap-2 mb-3">
+      <span class="inline-flex items-center text-[9px] font-bold tracking-[1.8px] uppercase
+                   px-2.5 py-1 rounded-[3px] text-red-600 bg-red-50">
+        Enrichment failed
+      </span>
+      <span class="text-[10px] text-slate-400">
+        {{ source_outlet or '' }}
+        {% if source_outlet and publication_date %}&nbsp;&middot;&nbsp;{% endif %}
+        {{ publication_date or '' }}
+      </span>
+    </div>
+
+    <a href="{{ url }}" target="_blank" rel="noopener"
+       class="block text-[14px] font-bold text-[#0d1f45] leading-snug hover:text-blue-700
+              transition-colors duration-150 mb-4">
+      {{ title }}
+    </a>
+
+    <div class="text-[11px] text-slate-400 mb-4">
+      The article could not be enriched. The page may be behind a paywall or the AI returned an unexpected response.
+    </div>
+
+    <div class="flex items-center gap-3 pt-3 border-t border-slate-100">
+      <button
+        hx-post="/enrich/{{ article_id }}"
+        hx-target="#article-{{ article_id }}"
+        hx-swap="outerHTML"
+        hx-indicator="#ind-err-{{ article_id }}"
+        hx-disabled-elt="this"
+        class="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[1.2px]
+               px-4 py-2 rounded-lg text-white bg-red-500 hover:bg-red-600
+               transition-colors disabled:opacity-50 disabled:cursor-wait"
+      >
+        Retry
+      </button>
+      <div id="ind-err-{{ article_id }}" class="htmx-indicator flex items-center gap-2 text-[11px] text-slate-400">
+        <svg class="w-3.5 h-3.5 animate-spin text-red-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        Retrying...
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,31 @@
+{% if children %}
+<div class="mt-8 mb-3 text-[10px] font-bold uppercase tracking-[1.5px] text-slate-400">
+  Linked opportunities ({{ children|length }}) &mdash; oldest to newest
+</div>
+<div id="children-list" class="space-y-3">
+  {% for article in children %}
+  <div id="group-child-{{ article.enrichment_id }}">
+    <details class="bg-white rounded-2xl border border-slate-200/60 overflow-hidden shadow-[0_1px_4px_rgba(13,31,69,0.05)]">
+      <summary class="cursor-pointer list-none p-4 flex items-center gap-3 hover:bg-slate-50/60 transition-colors">
+        <span class="text-[9px] font-bold text-slate-400 flex-shrink-0">{{ article.opportunity_code }}</span>
+        <span class="text-[9px] font-black uppercase tracking-[1px] px-2 py-[3px] rounded-full text-white flex-shrink-0"
+              style="background:{{ article.phase_color }};">{{ article.phase or 'Unknown' }}</span>
+        <span class="text-[12px] font-semibold text-slate-700 truncate flex-1">{{ article.title }}</span>
+        <span class="text-[10px] text-slate-400 flex-shrink-0">{{ article.publication_date }}</span>
+        <svg class="w-3.5 h-3.5 text-slate-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+        </svg>
+      </summary>
+      <div class="border-t border-slate-100 p-2">
+        {% set in_group_detail = true %}
+        {% include "partials/enriched_card.html" %}
+      </div>
+    </details>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="mt-8 text-center py-10 text-slate-300 text-[12px]">
+  No other opportunities linked yet. Use the <strong>&vellip;</strong> menu on the card above to link one.
+</div>
+{% endif %}

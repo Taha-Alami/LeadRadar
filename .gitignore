@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets — .env.example is the only env file that belongs in git
+.env
+.env.*
+*.env
+!.env.example
+
+# Local output
+outbox/
+*.log
+*.tmp
+*.bak
+
+# Data files
+*.xlsx
+*.xls
+*.csv
+*.db
+*.sqlite
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editors / OS / tooling
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/

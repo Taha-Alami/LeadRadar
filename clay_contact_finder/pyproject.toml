@@ -1,0 +1,24 @@
+[project]
+name = "clay-contact-finder"
+version = "0.1.0"
+description = "B2B company/contact enrichment (name -> domain -> verified contacts -> email/phone) on top of Clay's Public API."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+    "openai>=1.30",
+    "pycountry>=23.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["clay_contact_finder*"]

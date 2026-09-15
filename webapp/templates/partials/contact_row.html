@@ -1,0 +1,40 @@
+{# One contact in the "Enrich Contact" results list.
+   Expects `c`: id, full_name, job_title, company_name, linkedin_url, city,
+   work_email, work_phone, email_enriched_at, phone_enriched_at.
+   Icon-face avatar (not letter initials) deliberately distinguishes an
+   external prospect contact from the internal-team initials avatars used
+   elsewhere in this app (notes, assignment). #}
+{% set _ccolor = c.full_name | avatar_color %}
+<div id="contact-row-{{ c.id }}" class="flex items-start gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
+
+  <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background:{{ _ccolor }};">
+    <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 12.75c2.9 0 5.25-2.35 5.25-5.25S14.9 2.25 12 2.25 6.75 4.6 6.75 7.5 9.1 12.75 12 12.75zm0 2.25c-3.53 0-10.5 1.77-10.5 5.3v1.7a1 1 0 001 1h19a1 1 0 001-1v-1.7c0-3.53-6.97-5.3-10.5-5.3z"/>
+    </svg>
+  </div>
+
+  <div class="min-w-0 flex-1">
+    <div class="flex items-center gap-1.5 min-w-0">
+      <span class="text-[12.5px] font-bold text-[#0d1f45] truncate">{{ c.full_name }}</span>
+      {% if c.linkedin_url %}
+      <a href="{{ c.linkedin_url }}" target="_blank" rel="noopener" title="LinkedIn profile"
+         class="flex-shrink-0 text-slate-300 hover:text-[#0A66C2] transition-colors">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.03-1.85-3.03-1.86 0-2.14 1.45-2.14 2.94v5.66H9.34V9h3.42v1.56h.05c.48-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.07 2.07 0 110-4.13 2.07 2.07 0 010 4.13zM7.11 20.45H3.56V9h3.55v11.45z"/>
+        </svg>
+      </a>
+      {% endif %}
+    </div>
+    {% if c.job_title %}<div class="text-[11px] text-slate-500 truncate mt-0.5">{{ c.job_title }}</div>{% endif %}
+    {% if c.city %}<div class="text-[10px] text-slate-400 mt-0.5">{{ c.city }}</div>{% endif %}
+
+    <div class="flex items-center gap-3.5 mt-2 flex-wrap">
+      {% if not c.linkedin_url %}
+      <span class="text-[9.5px] text-slate-300 italic">Name-only lead &mdash; no email/phone available</span>
+      {% else %}
+      {% include "partials/contact_email_block.html" %}
+      {% include "partials/contact_phone_block.html" %}
+      {% endif %}
+    </div>
+  </div>
+</div>

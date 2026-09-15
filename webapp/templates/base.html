@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="app-country" content="{{ country | default('') }}">
+  <title>{% block title %}LeadRadar{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.3/css/flag-icons.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: { DEFAULT: '#0d1f45', dark: '#060f22', mid: '#163a6e', soft: '#1a5276' }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .htmx-indicator            { opacity: 0; transition: opacity 150ms ease-in; pointer-events: none; }
+    .htmx-request .htmx-indicator,
+    .htmx-request.htmx-indicator { opacity: 1; }
+
+    .sidebar-scroll::-webkit-scrollbar       { width: 3px; }
+    .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+
+    @keyframes card-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .card-animate { animation: card-in 280ms cubic-bezier(0.2,0,0,1) both; }
+
+    /* Card hover lift */
+    .card-hover-lift {
+      transition: transform 200ms cubic-bezier(0.2,0,0,1), box-shadow 200ms cubic-bezier(0.2,0,0,1);
+    }
+    .card-hover-lift:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 36px rgba(13,31,69,0.13), 0 2px 6px rgba(13,31,69,0.06);
+    }
+
+    /* Sidebar nav items */
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 12px; border-radius: 8px; font-size: 12px;
+      margin-bottom: 2px; transition: all 140ms ease;
+      color: rgba(147,197,253,0.65); text-decoration: none;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
+    .nav-item.active {
+      background: rgba(255,255,255,0.09);
+      color: #fff; font-weight: 600;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07), -2px 0 0 rgba(96,165,250,0.7);
+    }
+
+    @keyframes badge-ping {
+      0%        { transform: scale(1);   opacity: 0.7; }
+      75%, 100% { transform: scale(2.6); opacity: 0; }
+    }
+    @keyframes badge-glow {
+      0%, 100% { opacity: 1;    box-shadow: 0 2px 6px rgba(239,68,68,0.35); }
+      50%       { opacity: 0.55; box-shadow: 0 2px 18px rgba(239,68,68,0.75); }
+    }
+
+    /* Flatpickr — navy brand override */
+    .flatpickr-calendar {
+      border-radius: 12px !important;
+      border: 1px solid #e2e8f0 !important;
+      box-shadow: 0 8px 28px rgba(13,31,69,.12) !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    }
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange,
+    .flatpickr-day.selected:hover,
+    .flatpickr-day.startRange:hover,
+    .flatpickr-day.endRange:hover {
+      background: #0d1f45 !important;
+      border-color: #0d1f45 !important;
+      color: #fff !important;
+    }
+    .flatpickr-day.inRange {
+      background: #e8edf5 !important;
+      border-color: transparent !important;
+      box-shadow: -5px 0 0 #e8edf5, 5px 0 0 #e8edf5 !important;
+      color: #0d1f45 !important;
+    }
+    .flatpickr-day.today:not(.selected) { border-color: #163a6e !important; }
+  </style>
+</head>
+<body class="min-h-screen" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background-color:#F0F4FA;background-image:radial-gradient(circle at 1px 1px,rgba(13,31,69,0.055) 1px,transparent 0);background-size:26px 26px;">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-52 flex flex-col z-20"
+         style="background:linear-gradient(175deg,#0f2252 0%,#080f24 60%,#060c1e 100%);box-shadow:2px 0 32px rgba(0,0,0,0.45);">
+
+    <!-- Ambient glow behind header -->
+    <div style="position:absolute;top:0;left:0;right:0;height:180px;
+                background:radial-gradient(ellipse at 40% 0%,rgba(59,130,246,0.15) 0%,transparent 70%);
+                pointer-events:none;"></div>
+
+    <!-- Header -->
+    <div class="relative px-4 pt-5 pb-5">
+      <!-- Icon + brand row -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">
+        <!-- LeadRadar radar icon -->
+        <div style="width:38px;height:38px;border-radius:50%;flex-shrink:0;overflow:hidden;
+                    box-shadow:0 0 16px rgba(59,130,246,0.25),0 0 0 1px rgba(96,165,250,0.2);">
+          <img src="/static/favicon.svg" width="38" height="38" alt="LeadRadar"
+               style="width:38px;height:38px;object-fit:cover;display:block;">
+        </div>
+        <div>
+          <div style="font-size:8px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(147,197,253,0.9);margin-bottom:3px;-webkit-font-smoothing:antialiased;">{{ profile.company_name }}</div>
+          <div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:0.5px;text-transform:uppercase;line-height:1.15;-webkit-font-smoothing:antialiased;">Lead<br>Radar</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:5px;">
+            <span style="width:5px;height:5px;border-radius:50%;background:#10b981;box-shadow:0 0 7px rgba(16,185,129,0.6);flex-shrink:0;"></span>
+            <span style="font-size:9px;color:rgba(148,163,184,0.7);letter-spacing:0.4px;">Live pipeline</span>
+          </div>
+        </div>
+      </div>
+      <!-- Accent line -->
+      <div style="position:absolute;bottom:0;left:16px;right:16px;height:1px;
+                  background:linear-gradient(90deg,transparent,rgba(96,165,250,0.22),transparent);"></div>
+    </div>
+
+    <nav class="flex-1 sidebar-scroll overflow-y-auto py-4 px-2">
+
+      <div class="px-3 mb-2.5" style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;color:rgba(148,163,184,0.9);">Countries</div>
+      {% for code, label in countries.items() %}
+      <a href="/?country={{ code }}&filt={{ filt }}&search={{ search }}&date_from={{ date_from }}&date_to={{ date_to }}&sector={{ sector }}&priority={{ priority }}&assigned_to={{ assigned_to }}"
+         class="nav-item {% if country == code %}active{% endif %}">
+        <span class="fi fi-{{ country_flag(code) }}" style="width:18px;height:14px;border-radius:2px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></span>
+        {{ label }}
+      </a>
+      {% endfor %}
+    </nav>
+
+    <!-- Footer -->
+    <div class="px-4 py-4" style="border-top:1px solid rgba(255,255,255,0.06);">
+      <div class="mb-1.5" style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;font-weight:800;color:rgba(148,163,184,0.9);">Business profile</div>
+      <div class="nav-item" style="margin-bottom:0;align-items:center;padding-left:0;padding-right:4px;cursor:default;" title="{{ profile.tagline }}">
+        <div style="width:24px;height:24px;border-radius:50%;flex-shrink:0;
+                    background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:9px;font-weight:700;color:#fff;letter-spacing:0.3px;">{{ profile.company_name[:2] | upper }}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;color:#fff;">{{ profile.company_name }}</div>
+          <div style="font-size:9px;color:rgba(96,165,250,0.65);line-height:1.3;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ profile.tagline }}</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Topbar ───────────────────────────────────────────────────────── -->
+  <header class="ml-52 h-12 flex items-center justify-end px-6 bg-white sticky top-0 z-40 flex-shrink-0"
+          style="border-bottom:1px solid rgba(13,31,69,0.08);box-shadow:0 1px 12px rgba(13,31,69,0.06);">
+
+    <!-- user identity + feedback + logo -->
+    <div class="flex items-center gap-4">
+      {% set _user = current_user(request) %}
+      {% if _user %}
+      <a href="/logout" title="Signed in via Microsoft Entra ID — click to sign out"
+         class="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-slate-200 bg-slate-50
+                hover:bg-slate-100 hover:border-slate-300 transition-colors max-w-[260px]">
+        <span class="w-7 h-7 rounded-full bg-[#0d1f45] text-white flex items-center justify-center
+                     text-[11px] font-bold flex-shrink-0 select-none">{{ _user.initials }}</span>
+        <span class="flex flex-col min-w-0 leading-tight">
+          <span class="text-[12px] font-semibold text-[#0d1f45] truncate">{{ _user.display }}</span>
+          <span class="text-[10px] text-slate-400 truncate">
+            {{ _user.email or "signed in" }} &middot; <span class="underline decoration-dotted">sign out</span>
+          </span>
+        </span>
+      </a>
+      {% elif auth_configured() %}
+      <a href="/login"
+         class="text-[11px] font-bold uppercase tracking-wide bg-[#0d1f45] text-white px-3 py-1.5
+                rounded-lg shadow-sm hover:bg-[#163a6e] transition-colors">
+        Sign in
+      </a>
+      {% endif %}
+      <img src="/static/favicon.svg" alt="LeadRadar" class="h-7 w-7 flex-shrink-0">
+    </div>
+  </header>
+
+  <!-- ── Activity panel (right, slides in/out) ─────────────────────── -->
+  <div id="activity-panel"
+       style="position:fixed;top:0;right:-300px;height:100%;width:288px;z-index:50;
+              background:#fff;box-shadow:-4px 0 32px rgba(13,31,69,0.12);
+              display:flex;flex-direction:column;
+              transition:right 260ms cubic-bezier(0.2,0,0,1);">
+
+    <!-- Panel header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:14px 16px;border-bottom:1px solid #f1f5f9;flex-shrink:0;
+                background:linear-gradient(135deg,#0d1f45 0%,#163a6e 100%);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.7)" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span style="font-size:11px;font-weight:800;color:#fff;letter-spacing:0.5px;text-transform:uppercase;">
+          Recent Activity
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <!-- Refresh -->
+        <button onclick="refreshActivity()" title="Refresh"
+                style="width:24px;height:24px;border:none;background:rgba(255,255,255,0.1);border-radius:6px;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;
+                       color:rgba(255,255,255,0.6);transition:background 120ms ease;"
+                onmouseover="this.style.background='rgba(255,255,255,0.18)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+        <!-- Close -->
+        <button onclick="toggleActivityPanel()" title="Close"
+                style="width:24px;height:24px;border:none;background:rgba(255,255,255,0.1);border-radius:6px;
+                       cursor:pointer;display:flex;align-items:center;justify-content:center;
+                       color:rgba(255,255,255,0.6);font-size:16px;line-height:1;
+                       transition:background 120ms ease;"
+                onmouseover="this.style.background='rgba(255,255,255,0.18)'"
+                onmouseout="this.style.background='rgba(255,255,255,0.1)'">&times;</button>
+      </div>
+    </div>
+
+    <!-- Feed area (scrollable) -->
+    <div id="activity-feed" style="flex:1;overflow-y:auto;"
+         class="sidebar-scroll">
+      <div style="display:flex;align-items:center;justify-content:center;padding:32px;
+                  color:rgba(148,163,184,0.5);font-size:11px;">
+        Loading…
+      </div>
+    </div>
+  </div>
+
+  <!-- Backdrop (click to close) -->
+  <div id="activity-backdrop"
+       onclick="toggleActivityPanel()"
+       style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.18);z-index:49;
+              backdrop-filter:blur(1px);transition:opacity 260ms ease;"></div>
+
+  <script>
+  (function () {
+    var panel    = document.getElementById('activity-panel');
+    var backdrop = document.getElementById('activity-backdrop');
+    var open     = false;
+
+    function _btn() { return document.getElementById('activity-toggle-btn'); }
+
+    function _loadFeed() {
+      var c = (document.querySelector('meta[name="app-country"]') || {}).content || '';
+      var url = c ? '/activity?country=' + encodeURIComponent(c) : '/activity';
+      htmx.ajax('GET', url, {target: '#activity-feed', swap: 'innerHTML'});
+    }
+
+    function setOpen(show) {
+      open = show;
+      panel.style.right      = show ? '0'      : '-300px';
+      backdrop.style.display = show ? 'block'  : 'none';
+
+      var b = _btn();
+      if (b) {
+        b.style.background  = show ? '#e8edf5' : '';
+        b.style.color       = show ? '#0d1f45' : '';
+        b.style.borderColor = show ? '#c7d0e0' : '';
+      }
+
+      // Always reload the feed when opening so it reflects latest actions
+      if (show) { _loadFeed(); }
+
+      try { localStorage.setItem('activityPanelOpen', show ? '1' : '0'); } catch(e) {}
+    }
+
+    window.toggleActivityPanel = function () { setOpen(!open); };
+    window.refreshActivity     = function () { _loadFeed(); };
+
+    // Restore panel state from previous session
+    try {
+      if (localStorage.getItem('activityPanelOpen') === '1') {
+        setTimeout(function () { setOpen(true); }, 150);
+      }
+    } catch(e) {}
+  }());
+  </script>
+
+  <!-- ── Main ───────────────────────────────────────────────────── -->
+  <main class="ml-52 min-h-screen flex flex-col">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ── Link-opportunity modal ───────────────────────────────────── -->
+  <div id="link-modal-overlay"
+       class="hidden fixed inset-0 bg-black/40 z-[9998] flex items-center justify-center p-4"
+       onclick="if (event.target === this) closeLinkModal();">
+    <div id="link-modal-content"
+         class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"></div>
+  </div>
+
+  <!-- ── Enrichment toast ──────────────────────────────────────── -->
+  <div id="enrich-toast" style="
+    display:none;
+    position:fixed;
+    top:20px;
+    right:20px;
+    z-index:9999;
+    width:300px;
+    background:#ffffff;
+    border:1px solid #e2e8f0;
+    border-radius:12px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.16);
+    overflow:hidden;
+    opacity:0;
+    transform:translateX(20px);
+    transition:opacity 0.25s ease, transform 0.25s ease;
+  "></div>
+
+  <script>
+  // ── Toast: triggered by htmx:afterSwap when a card with data-toast-* is swapped in ──
+  (function () {
+    var toast    = document.getElementById('enrich-toast');
+    var timer    = null;
+    var barTimer = null;
+
+    function esc(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function dismiss() {
+      clearTimeout(timer);
+      clearTimeout(barTimer);
+      toast.style.opacity   = '0';
+      toast.style.transform = 'translateX(20px)';
+      setTimeout(function () { toast.style.display = 'none'; }, 280);
+    }
+
+    function show(d) {
+      clearTimeout(timer);
+      clearTimeout(barTimer);
+
+      var pc = d.color || '#9E9E9E';
+
+      toast.innerHTML =
+        '<div style="height:3px;background:' + pc + ';"></div>' +
+        '<div style="padding:13px 13px 11px;">' +
+          '<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">' +
+            '<span style="font-size:8px;font-weight:800;letter-spacing:2px;text-transform:uppercase;' +
+                         'padding:3px 8px;border-radius:3px;color:#fff;flex-shrink:0;' +
+                         'background:' + pc + ';">' + esc(d.phase) + '</span>' +
+            (d.city ? '<span style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                      '&bull; ' + esc(d.city) + '</span>' : '') +
+            '<button id="toast-close-btn" style="margin-left:auto;flex-shrink:0;width:22px;height:22px;' +
+                    'border:none;background:#f1f5f9;border-radius:50%;cursor:pointer;' +
+                    'font-size:14px;line-height:1;color:#64748b;display:flex;align-items:center;justify-content:center;"' +
+                    'onclick="document.getElementById(\'enrich-toast-dismiss\').click()">' +
+                    '&times;</button>' +
+          '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:#0d1f45;line-height:1.3;margin-bottom:10px;' +
+                      'overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' +
+            esc(d.title) +
+          '</div>' +
+          ((d.company || d.budget) ?
+            '<div style="display:flex;gap:7px;">' +
+              (d.company ?
+                '<div style="flex:1;min-width:0;background:#f8fafc;border-radius:6px;padding:7px 9px;">' +
+                  '<div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#94a3b8;margin-bottom:3px;">Company</div>' +
+                  '<div style="font-size:11px;font-weight:600;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(d.company) + '</div>' +
+                '</div>' : '') +
+              (d.budget ?
+                '<div style="flex:1;min-width:0;background:#eff6ff;border-radius:6px;padding:7px 9px;">' +
+                  '<div style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#93c5fd;margin-bottom:3px;">Budget</div>' +
+                  '<div style="font-size:11px;font-weight:600;color:#1d4ed8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(d.budget) + '</div>' +
+                '</div>' : '') +
+            '</div>' : '') +
+        '</div>' +
+        '<div style="height:4px;background:#f1f5f9;">' +
+          '<div id="enrich-toast-bar" style="height:4px;background:' + pc + ';width:100%;"></div>' +
+        '</div>';
+
+      // Hidden dismiss anchor for button onclick (avoids CSP inline handler issues)
+      var anchor = document.createElement('button');
+      anchor.id  = 'enrich-toast-dismiss';
+      anchor.style.display = 'none';
+      anchor.onclick = dismiss;
+      toast.appendChild(anchor);
+
+      toast.style.display   = 'block';
+
+      // Animate in
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          toast.style.opacity   = '1';
+          toast.style.transform = 'translateX(0)';
+        });
+      });
+
+      // Countdown bar — setTimeout lets the browser paint width:100% first,
+      // then the transition from 100%→0% fires cleanly.
+      barTimer = setTimeout(function () {
+        var bar = document.getElementById('enrich-toast-bar');
+        if (bar) {
+          bar.style.transition = 'width 5s linear';
+          bar.style.width      = '0%';
+        }
+      }, 50);
+
+      // Auto-dismiss
+      timer = setTimeout(dismiss, 5000);
+    }
+
+    // Toast is now triggered exclusively via HX-Trigger showEnrichToast event
+    // from the server — no htmx:afterSwap handler needed.
+
+    // Expose show() so the showEnrichToast HTMX event (fired when a card is
+    // deleted from the "To Enrich" list) can reuse the same toast format.
+    window._enrichToastShow   = show;
+    window._enrichToastDismiss = dismiss;
+  }());
+
+  // When enrichment is triggered from the "To Enrich" tab, the card is removed
+  // (HX-Reswap: delete) and this event fires instead of htmx:afterSwap.
+  document.body.addEventListener('showEnrichToast', function (evt) {
+    var d = evt.detail || {};
+    if (typeof window._enrichToastShow !== 'function') return;
+    window._enrichToastShow({
+      phase:   d.phase   || 'Enriched',
+      color:   d.color   || '#0d1f45',
+      title:   d.title   || d.code || 'Opportunity enriched',
+      city:    d.city    || '',
+      company: d.company || '',
+      budget:  d.budget  || '',
+    });
+    // Inject a "View in Enriched tab" link directly into the toast body
+    if (d.url) {
+      var t = document.getElementById('enrich-toast');
+      if (t) {
+        var link = document.createElement('a');
+        link.href = d.url;
+        link.textContent = 'View in Enriched tab →';
+        link.style.cssText = 'display:block;margin:0 13px 11px;font-size:11px;font-weight:700;' +
+          'color:#0d1f45;text-decoration:underline;text-underline-offset:2px;';
+        // Insert before the progress bar (last child)
+        var bar = t.querySelector('#enrich-toast-bar');
+        var barWrap = bar ? bar.parentElement : null;
+        if (barWrap) t.insertBefore(link, barWrap);
+        else t.appendChild(link);
+      }
+    }
+  });
+  </script>
+
+  <script>
+  // ── Kebab (3-dot) menus: one open at a time, closes on outside click ──
+  function toggleKebab(evt, id) {
+    evt.stopPropagation();
+    document.querySelectorAll('[id^="kebab-"]').forEach(function (el) {
+      if (el.id !== id) el.classList.add('hidden');
+    });
+    document.getElementById(id).classList.toggle('hidden');
+  }
+  function closeAllKebabs() {
+    document.querySelectorAll('[id^="kebab-"]').forEach(function (el) { el.classList.add('hidden'); });
+  }
+  document.addEventListener('click', function (evt) {
+    if (!evt.target.closest('[id^="kebab-"]') && !evt.target.closest('[data-kebab-toggle]')) {
+      closeAllKebabs();
+    }
+  });
+
+  // ── Link-opportunity modal ──
+  var _linkTabActiveCls   = 'bg-white text-[#0d1f45] shadow-sm';
+  var _linkTabInactiveCls = 'text-slate-400 hover:text-slate-600';
+
+  function openLinkModal(enrichmentId, articleId, country, prefix) {
+    closeAllKebabs();
+    var searchUrl = '/search-link-candidates?current_id=' + enrichmentId +
+                     '&current_article_id=' + articleId + '&country=' + country;
+    var content = document.getElementById('link-modal-content');
+    content.innerHTML =
+      '<div class="p-5 border-b border-slate-100 flex items-center justify-between">' +
+        '<h3 class="text-[13px] font-bold text-[#0d1f45] uppercase tracking-wide">Link Opportunity</h3>' +
+        '<button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>' +
+      '</div>' +
+      '<div class="p-5">' +
+
+        '<div class="flex gap-1 bg-slate-100 p-1 rounded-lg mb-3">' +
+          '<button type="button" id="link-tab-id" onclick="switchLinkTab(\'id\')" ' +
+                  'class="flex-1 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ' + _linkTabActiveCls + '">By ID</button>' +
+          '<button type="button" id="link-tab-title" onclick="switchLinkTab(\'title\')" ' +
+                  'class="flex-1 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ' + _linkTabInactiveCls + '">By Title</button>' +
+        '</div>' +
+
+        '<div id="link-panel-id" class="mb-3">' +
+          '<div class="flex items-center gap-2 border border-slate-200 rounded-lg pl-3 pr-1 py-1 ' +
+                      'focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-400">' +
+            '<span class="text-[13px] font-bold text-slate-400 select-none flex-shrink-0">' + prefix + '-</span>' +
+            '<input type="text" id="link-input-id" inputmode="numeric" pattern="[0-9]*" autocomplete="off" ' +
+                   'placeholder="123" name="q" ' +
+                   'class="w-full text-[13px] border-0 outline-none py-1" ' +
+                   'hx-get="' + searchUrl + '&mode=id" ' +
+                   'hx-trigger="keyup changed delay:300ms" ' +
+                   'hx-target="#link-search-results" ' +
+                   'hx-include="this">' +
+          '</div>' +
+        '</div>' +
+
+        '<div id="link-panel-title" class="hidden mb-3">' +
+          '<input type="text" id="link-input-title" autocomplete="off" placeholder="Search by title…" name="q" ' +
+                 'class="w-full text-[13px] border border-slate-200 rounded-lg px-3 py-2 outline-none ' +
+                        'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400" ' +
+                 'hx-get="' + searchUrl + '&mode=title" ' +
+                 'hx-trigger="keyup changed delay:300ms" ' +
+                 'hx-target="#link-search-results" ' +
+                 'hx-include="this">' +
+        '</div>' +
+
+        '<div id="link-search-results" class="space-y-2 max-h-64 overflow-y-auto">' +
+          '<div class="p-3 text-[11px] text-slate-400">Type the numeric ID to search…</div>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('link-modal-overlay').classList.remove('hidden');
+    htmx.process(content);
+    document.getElementById('link-input-id').focus();
+  }
+
+  function switchLinkTab(tab) {
+    var isId = tab === 'id';
+    document.getElementById('link-panel-id').classList.toggle('hidden', !isId);
+    document.getElementById('link-panel-title').classList.toggle('hidden', isId);
+    document.getElementById('link-tab-id').className    = 'flex-1 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ' + (isId ? _linkTabActiveCls : _linkTabInactiveCls);
+    document.getElementById('link-tab-title').className = 'flex-1 text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-150 ' + (!isId ? _linkTabActiveCls : _linkTabInactiveCls);
+    document.getElementById('link-search-results').innerHTML =
+      '<div class="p-3 text-[11px] text-slate-400">' + (isId ? 'Type the numeric ID to search…' : 'Type a title to search…') + '</div>';
+    document.getElementById(isId ? 'link-input-id' : 'link-input-title').focus();
+  }
+
+  // ── Share-via-email modal — reuses the same overlay/content shell as the link modal ──
+  // Sourced from webapp/contacts.py — update there, both assignment and share pick it up.
+  var SHARE_RECIPIENT_SUGGESTIONS = [
+    {% for c in team_contacts %}'{{ c.email }}'{% if not loop.last %},{% endif %}{% endfor %}
+  ];
+  var DEFAULT_SHARE_MESSAGE = 'Hi,\n\nTake a look at this opportunity, it could be worth following up on.\n\nBest regards';
+
+  function openShareModal(enrichmentId, opportunityCode) {
+    closeAllKebabs();
+    var options = SHARE_RECIPIENT_SUGGESTIONS.map(function (e) {
+      return '<option value="' + e + '">';
+    }).join('');
+
+    var content = document.getElementById('link-modal-content');
+    content.innerHTML =
+      '<div class="p-5 border-b border-slate-100 flex items-center justify-between">' +
+        '<h3 class="text-[13px] font-bold text-[#0d1f45] uppercase tracking-wide">Send via Email</h3>' +
+        '<button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>' +
+      '</div>' +
+      '<div class="p-5">' +
+
+        (opportunityCode ?
+          '<div class="text-[10px] font-bold text-slate-400 mb-3">Sharing ' + opportunityCode + '</div>' : '') +
+
+        '<label class="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">' +
+          'Recipients <span class="font-normal text-slate-300 normal-case">(comma-separated for multiple)</span>' +
+        '</label>' +
+        '<input type="email" id="share-to-input" name="to_email" list="share-recipient-suggestions" required multiple ' +
+               'autocomplete="off" placeholder="name@company.com, another@company.com" ' +
+               'class="w-full text-[13px] border border-slate-200 rounded-lg px-3 py-2 outline-none ' +
+                      'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 mb-3">' +
+        '<datalist id="share-recipient-suggestions">' + options + '</datalist>' +
+
+        '<label class="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Message</label>' +
+        '<textarea id="share-message-input" name="message" rows="4" ' +
+                  'class="w-full text-[13px] border border-slate-200 rounded-lg px-3 py-2 outline-none ' +
+                         'focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 resize-none mb-3">' +
+          DEFAULT_SHARE_MESSAGE +
+        '</textarea>' +
+
+        '<div id="share-status" class="mb-2"></div>' +
+
+        '<button ' +
+               'hx-post="/share/' + enrichmentId + '" ' +
+               'hx-include="#share-to-input, #share-message-input" ' +
+               'hx-target="#share-status" ' +
+               'hx-swap="innerHTML" ' +
+               'class="w-full px-4 py-2 rounded-lg bg-[#0d1f45] text-white text-[12px] font-bold ' +
+                      'hover:bg-[#163a6e] transition-colors">' +
+          'Send' +
+        '</button>' +
+      '</div>';
+
+    document.getElementById('link-modal-overlay').classList.remove('hidden');
+    htmx.process(content);
+    document.getElementById('share-to-input').focus();
+  }
+
+  function closeLinkModal() {
+    document.getElementById('link-modal-overlay').classList.add('hidden');
+  }
+
+  // ── Contacts modal — reuses the same overlay/content shell as link/share.
+  // Opening the modal is a cheap GET (cached results or a "not searched yet"
+  // prompt); the actual Clay search only fires when the user clicks
+  // "Find Contacts" inside it, via hx-post on that button. ──
+  function openContactsModal(enrichmentId, opportunityCode, company, country) {
+    closeAllKebabs();
+    var content = document.getElementById('link-modal-content');
+    content.innerHTML =
+      '<div class="p-5 border-b border-slate-100 flex items-center justify-between">' +
+        '<h3 class="text-[13px] font-bold text-[#0d1f45] uppercase tracking-wide">Contacts</h3>' +
+        '<button onclick="closeLinkModal()" class="text-slate-400 hover:text-slate-600 text-lg leading-none">&times;</button>' +
+      '</div>' +
+      '<div class="p-8 flex justify-center">' +
+        '<svg class="w-5 h-5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">' +
+          '<circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+          '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>' +
+        '</svg>' +
+      '</div>';
+    document.getElementById('link-modal-overlay').classList.remove('hidden');
+    htmx.ajax('GET', '/contacts/' + enrichmentId, {target: '#link-modal-content', swap: 'innerHTML'});
+  }
+
+  // ── Live progress text for an in-flight contact search, polled ~1x/s ──
+  // Started/stopped via hx-on::before-request / hx-on::after-request on the
+  // search/retry buttons in contacts_body.html. A plain interval (not an
+  // htmx polling trigger) because the indicator element is only ever
+  // *hidden* (opacity via .htmx-indicator), never removed from the DOM, so
+  // an hx-trigger="every 1s" on it would poll constantly even while idle.
+  var _contactsProgressTimer = null;
+  function startContactsProgressPoll(enrichmentId) {
+    stopContactsProgressPoll();
+    _contactsProgressTimer = setInterval(function () {
+      fetch('/contacts/' + enrichmentId + '/progress')
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (text) {
+          if (text === null) return;
+          var el = document.getElementById('contacts-progress-text');
+          if (el) el.textContent = text;
+        })
+        .catch(function () {});
+    }, 1000);
+  }
+  function stopContactsProgressPoll() {
+    if (_contactsProgressTimer) { clearInterval(_contactsProgressTimer); _contactsProgressTimer = null; }
+  }
+
+  // ── Card-wide click → group/detail page, except on links/buttons/menus ──
+  document.body.addEventListener('click', function (evt) {
+    var card = evt.target.closest('[data-group-link]');
+    if (!card) return;
+    if (evt.target.closest('a, button, [data-no-card-nav]')) return;
+    window.location.href = card.dataset.groupLink;
+  });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

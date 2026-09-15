@@ -1,0 +1,20 @@
+{# Full comment thread for one group, oldest first. Re-rendered wholesale on
+   every new comment (small lists, internal tool — simpler than patching in
+   a single appended item). #}
+{% if notes %}
+<div class="space-y-4">
+  {% for note in notes %}
+  {# ── Insert "Shared history" divider before the first 'history' note ── #}
+  {% if note.note_type == 'history' and (loop.first or notes[loop.index0 - 1].note_type != 'history') %}
+  <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-[1px] flex items-center gap-2">
+    <span class="flex-1 border-t border-slate-100"></span>
+    <span>Shared history{% if note.source_group_id %} from opportunity group #{{ note.source_group_id }}{% endif %}</span>
+    <span class="flex-1 border-t border-slate-100"></span>
+  </div>
+  {% endif %}
+  {% include "partials/note_item.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-[11px] text-slate-300 py-10">No notes yet — be the first to add one.</div>
+{% endif %}
